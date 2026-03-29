@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Resume & Portfolio Builder | Elevate Your Career</title>
+    <link rel="stylesheet" href="/src/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Plus+Jakarta+Sans:wght@200;400;700&display=swap" rel="stylesheet">
+</head>
+<body class="dark-theme">
+    <div id="app">
+        <!-- Landing Section -->
+        <header id="landing-hero" class="hero-section">
+            <div class="blob-container">
+                <div class="blob blob-1"></div>
+                <div class="blob blob-2"></div>
+            </div>
+            <nav class="glass-nav">
+                <div class="logo">
+                    <span class="logo-icon">✨</span>
+                    <span class="logo-text">AIGraft</span>
+                </div>
+                <div class="nav-links">
+                    <a href="#features">Features</a>
+                    <a href="#templates">Templates</a>
+                    <button id="get-started-btn" class="btn btn-primary">Get Started</button>
+                </div>
+            </nav>
+
+            <div class="hero-content">
+                <h1 class="glow-text">Your Career <br><span class="gradient-text">Redefined by AI</span></h1>
+                <p class="hero-subtitle">Convert your experiences into professional resumes and interactive portfolios in seconds. Built for the modern professional.</p>
+                <div class="hero-actions">
+                    <button class="btn btn-cta btn-large" onclick="app.startFlow()">Build My Resume <span class="btn-arrow">→</span></button>
+                    <button class="btn btn-secondary btn-large">View Templates</button>
+                </div>
+                <div class="hero-stats">
+                    <div class="stat"><span>10k+</span> Resumes Created</div>
+                    <div class="stat"><span>50+</span> ATS-friendly Templates</div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Multi-step Form Container -->
+        <section id="form-container" class="hidden">
+            <div class="form-wrapper glass-card">
+                <div class="form-progress">
+                    <div class="step active" data-step="1">1</div>
+                    <div class="step-connector"></div>
+                    <div class="step" data-step="2">2</div>
+                    <div class="step-connector"></div>
+                    <div class="step" data-step="3">3</div>
+                    <div class="step-connector"></div>
+                    <div class="step" data-step="4">4</div>
+                </div>
+                
+                <div id="form-steps">
+                    <!-- Step 1: Personal Details -->
+                    <div class="form-step active" id="step-1">
+                        <h2>Personal Details</h2>
+                        <div class="input-grid">
+                            <div class="input-group">
+                                <label>Full Name</label>
+                                <input type="text" id="fullname" placeholder="John Doe">
+                            </div>
+                            <div class="input-group">
+                                <label>Job Title</label>
+                                <input type="text" id="jobtitle" placeholder="Senior Product Designer">
+                            </div>
+                            <div class="input-group full-width">
+                                <label>About Me</label>
+                                <textarea id="about" placeholder="Tell us about yourself..."></textarea>
+                            </div>
+                            <div class="input-group">
+                                <label>Email</label>
+                                <input type="email" id="email" placeholder="john@example.com">
+                            </div>
+                            <div class="input-group">
+                                <label>Phone</label>
+                                <input type="text" id="phone" placeholder="+1 234 567 890">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Education & Skills -->
+                    <div class="form-step" id="step-2">
+                        <h2>Education & Skills</h2>
+                        <div class="dynamic-list" id="education-list">
+                            <label>Education</label>
+                            <div class="list-item">
+                                <input type="text" placeholder="Degree / University (e.g. BS in Design, MIT 2020)">
+                            </div>
+                        </div>
+                        <button class="btn btn-small btn-add" onclick="app.addItem('education-list')">+ Add More</button>
+
+                        <div class="input-group skills-input">
+                            <label>Skills (comma separated)</label>
+                            <input type="text" id="skills" placeholder="UI Design, React, Node.js, AI Systems">
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Experience & Projects -->
+                    <div class="form-step" id="step-3">
+                        <h2>Experience & Projects</h2>
+                        <div class="dynamic-list" id="experience-list">
+                            <label>Work Experience</label>
+                            <div class="list-item">
+                                <textarea placeholder="Role, Company (Year) - Description of your impact..."></textarea>
+                            </div>
+                        </div>
+                        <button class="btn btn-small btn-add" onclick="app.addItem('experience-list')">+ Add More</button>
+
+                        <div class="dynamic-list" id="projects-list">
+                            <label>Key Projects</label>
+                            <div class="list-item">
+                                <textarea placeholder="Project Name - What you built and which technologies you used..."></textarea>
+                            </div>
+                        </div>
+                        <button class="btn btn-small btn-add" onclick="app.addItem('projects-list')">+ Add More</button>
+                    </div>
+
+                    <!-- Step 4: Finalize & Templates -->
+                    <div class="form-step" id="step-4">
+                        <h2>Finalize & Theme</h2>
+                        <p>Choose a template for your resume.</p>
+                        <div class="template-selector">
+                            <div class="template-card active" data-template="modern">
+                                <div class="template-preview modern-thumb"></div>
+                                <span>Modern Minimal</span>
+                            </div>
+                            <div class="template-card" data-template="creative">
+                                <div class="template-preview creative-thumb"></div>
+                                <span>Creative Tech</span>
+                            </div>
+                            <div class="template-card" data-template="classic">
+                                <div class="template-preview classic-thumb"></div>
+                                <span>Classic Professional</span>
+                            </div>
+                        </div>
+                        <div class="ai-suggestion-box">
+                            <div class="ai-header">
+                                <span class="ai-icon">✨</span>
+                                <span>AI Insights</span>
+                            </div>
+                            <p id="ai-suggestion">Your profile looks strong! Add specific metrics to your projects for 40% more visibility.</p>
+                            <button class="btn btn-secondary btn-small" onclick="app.regenerateSuggestions()">Regenerate Skills</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-nav">
+                    <button class="btn btn-secondary" id="prev-btn" disabled>Back</button>
+                    <button class="btn btn-primary" id="next-btn">Next Step</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Preview Modal/Section -->
+        <section id="preview-section" class="hidden">
+            <div class="preview-header glass-card">
+                <button class="btn btn-ghost" onclick="app.backToForm()">← Edit Details</button>
+                <div class="preview-actions">
+                    <button class="btn btn-secondary" onclick="app.printResume()">Download PDF</button>
+                    <button class="btn btn-primary" onclick="app.viewPortfolio()">View Portfolio Webpage</button>
+                </div>
+            </div>
+            
+            <div id="resume-preview" class="resume-container">
+                <!-- Resume content will be injected here -->
+            </div>
+        </section>
+
+        <!-- Portfolio Section (Generated separately or overlay) -->
+        <section id="portfolio-section" class="hidden">
+            <div id="portfolio-container">
+                <!-- Portfolio content injected here -->
+            </div>
+            <button class="p-back-btn" onclick="app.backToPreview()">← Back to App</button>
+        </section>
+
+        <footer class="main-footer">
+            <p>© 2026 AIGraft AI. Your dream job is just a prompt away.</p>
+        </footer>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</body>
+</html>
