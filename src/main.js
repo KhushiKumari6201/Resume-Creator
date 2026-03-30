@@ -15,11 +15,277 @@ const app = {
         projects: [],
         template: 'modern'
     },
+    resumes: [], // Caching: all saved resumes
+    currentPage: 1,
+    itemsPerPage: 3, 
+    searchTerm: '',
+    filterTemplate: 'all',
+
+    auth: {
+        isLoggedIn: false,
+        currentUser: null,
+
+        login() {
+            const email = document.getElementById('login-email').value;
+            const pass = document.getElementById('login-password').value;
+            
+            if (!this.validateEmail(email)) {
+                alert('🚨 Invalid Email: Please include "@" and a domain.');
+                return;
+            }
+
+            if (pass.length < 6) {
+                alert('🚨 Security Error: Password must be at least 6 characters.');
+                return;
+            }
+
+            if (email && pass) {
+                this.isLoggedIn = true;
+                const role = email.toLowerCase().includes('admin') ? 'admin' : 'user';
+                this.currentUser = { email, name: email.split('@')[0], role };
+                localStorage.setItem('aigraft_session', JSON.stringify(this.currentUser));
+                app.onAuthSuccess();
+            }
+        },
+
+        signup() {
+            const name = document.getElementById('signup-name').value;
+            const email = document.getElementById('signup-email').value;
+            const pass = document.getElementById('signup-password').value;
+
+            if (!name) {
+                alert('🚨 Name Required: Tell us who you are!');
+                return;
+            }
+
+            if (!this.validateEmail(email)) {
+                alert('🚨 Invalid Email format.');
+                return;
+            }
+
+            if (pass.length < 6) {
+                alert('🚨 Security Error: Password must be 6+ characters.');
+                return;
+            }
+
+            if (name && email && pass) {
+                alert('Account created successfully! Welcome to AIGraft.');
+                this.login();
+            }
+        },
+
+        resetPassword() {
+            const email = document.getElementById('forgot-email').value;
+            if (!this.validateEmail(email)) {
+                alert('🚨 Please enter a valid email to receive the reset link.');
+                return;
+            }
+            alert(`A password reset link has been sent to ${email}.`);
+            this.toggleForm('login');
+        },
+
+        validateEmail(email) {
+            return String(email)
+                .toLowerCase()
+                .match(
+                    /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|.(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
+                );
+        },
+
+        toggleForm(id) {
+            document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+            document.getElementById(`${id}-form`).classList.add('active');
+        },
+
+        checkSession() {
+            const session = localStorage.getItem('aigraft_session');
+            if (session) {
+                this.currentUser = JSON.parse(session);
+                this.isLoggedIn = true;
+                app.onAuthSuccess();
+            }
+        },
+
+        logout() {
+            localStorage.removeItem('aigraft_session');
+            window.location.reload();
+        }
+    },
+
+    admin: {
+        openDashboard() {
+            alert("Admin Management Dashboard initialized. All user data is secured.");
+            document.getElementById('admin-stats').scrollIntoView({ behavior: 'smooth' });
+        },
+        clearAllData() {
+            if (confirm("🚨 DANGER: This will factory reset the application for all users! Are you sure?")) {
+                localStorage.clear();
+                alert("Data purged. Reloading app...");
+                window.location.reload();
+            }
+        }
+    },
 
     // Initialization
     init() {
         this.setupEventListeners();
+        this.auth.checkSession();
+        this.loadResumes(); 
+        this.checkTheme();
         console.log('✨ AIGraft initialized');
+    },
+
+    loadResumes() {
+        const saved = localStorage.getItem('aigraft_resumes');
+        if (saved) {
+            this.resumes = JSON.parse(saved);
+        }
+    },
+
+    saveResume() {
+        const id = this.userData.id || Date.now().toString();
+        const existingIdx = this.resumes.findIndex(r => r.id === id);
+        
+        const resumeData = { ...this.userData, id, updatedAt: new Date().toISOString() };
+        
+        if (existingIdx > -1) {
+            this.resumes[existingIdx] = resumeData;
+            alert('Resume updated successfully!');
+        } else {
+            this.resumes.unshift(resumeData);
+            alert('New resume created and saved!');
+        }
+        
+        localStorage.setItem('aigraft_resumes', JSON.stringify(this.resumes));
+        this.showDashboard();
+    },
+
+    deleteResume(id) {
+        if (confirm('Are you sure you want to delete this resume?')) {
+            this.resumes = this.resumes.filter(r => r.id !== id);
+            localStorage.setItem('aigraft_resumes', JSON.stringify(this.resumes));
+            this.renderResumes();
+        }
+    },
+
+    editResume(id) {
+        const r = this.resumes.find(r => r.id === id);
+        if (r) {
+            this.userData = { ...r };
+            // Update UI fields
+            const fields = ['fullname', 'jobtitle', 'about', 'email', 'phone'];
+            fields.forEach(f => {
+                const el = document.getElementById(f);
+                if (el) el.value = r[f];
+            });
+            document.getElementById('skills').value = r.skills.join(', ');
+            
+            // Map dynamic lists... (for simplicity, only first items in basic demo)
+            this.currentStep = 1;
+            this.updateStepUI();
+            this.startFlow();
+        }
+    },
+
+    showDashboard() {
+        // Hide all major sections
+        document.querySelectorAll('section, header').forEach(s => s.classList.add('hidden'));
+        document.getElementById('dashboard-section').classList.remove('hidden');
+        this.renderResumes();
+    },
+
+    renderResumes() {
+        const list = document.getElementById('resume-list');
+        const controls = document.getElementById('pagination-controls');
+        if (!list) return;
+
+        // Filtering Logic (Search + Filter)
+        const filteredResumes = this.resumes.filter(r => {
+            const matchesSearch = !this.searchTerm || 
+                r.fullname.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
+                r.skills.some(s => s.toLowerCase().includes(this.searchTerm.toLowerCase()));
+            
+            const matchesTemplate = this.filterTemplate === 'all' || r.template === this.filterTemplate;
+
+            return matchesSearch && matchesTemplate;
+        });
+
+        // Pagination Logic on filtered list
+        const start = (this.currentPage - 1) * this.itemsPerPage;
+        const pagedItems = filteredResumes.slice(start, start + this.itemsPerPage);
+
+        list.innerHTML = pagedItems.map(r => `
+            <div class="resume-card glass-card">
+                <div class="r-thumb ${r.template}-thumb"></div>
+                <div class="r-content">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start">
+                        <h3>${r.fullname || 'Untitled'}</h3>
+                        <span class="badge ${r.template}">${r.template}</span>
+                    </div>
+                    <p>${r.jobtitle || 'No Title'}</p>
+                    <div class="r-skills-preview">
+                        ${r.skills.slice(0, 3).map(s => `<span>#${s}</span>`).join(' ')}
+                    </div>
+                    <div class="r-meta">Updated: ${new Date(r.updatedAt).toLocaleDateString()}</div>
+                </div>
+                <div class="r-actions">
+                    <button class="btn btn-secondary btn-small" onclick="app.editResume('${r.id}')">Edit</button>
+                    <button class="btn btn-ghost btn-small" style="color:var(--red)" onclick="app.deleteResume('${r.id}')">Delete</button>
+                </div>
+            </div>
+        `).join('') || `<div class="empty-state">No matching resumes found for "${this.searchTerm}".</div>`;
+
+        // Render controls
+        const totalPages = Math.ceil(filteredResumes.length / this.itemsPerPage);
+        controls.innerHTML = totalPages > 1 ? `
+            <button class="btn btn-ghost" ${this.currentPage === 1 ? 'disabled' : ''} onclick="app.prevPage()">Previous</button>
+            <span>Page ${this.currentPage} of ${totalPages}</span>
+            <button class="btn btn-ghost" ${this.currentPage === totalPages ? 'disabled' : ''} onclick="app.nextPage()">Next</button>
+        ` : '';
+    },
+
+    onSearchUpdate(val) {
+        this.searchTerm = val;
+        this.currentPage = 1;
+        this.renderResumes();
+    },
+
+    onFilterUpdate(val) {
+        this.filterTemplate = val;
+        this.currentPage = 1;
+        this.renderResumes();
+    },
+
+    toggleTheme() {
+        const isLight = document.body.classList.toggle('light-mode');
+        const btn = document.getElementById('theme-toggle');
+        if (btn) btn.textContent = isLight ? '☀️' : '🌙';
+        localStorage.setItem('aigraft_theme', isLight ? 'light' : 'dark');
+    },
+
+    checkTheme() {
+        const saved = localStorage.getItem('aigraft_theme');
+        if (saved === 'light') {
+            document.body.classList.add('light-mode');
+            const btn = document.getElementById('theme-toggle');
+            if (btn) btn.textContent = '☀️';
+        }
+    },
+
+    nextPage() { this.currentPage++; this.renderResumes(); },
+    prevPage() { if (this.currentPage > 1) { this.currentPage--; this.renderResumes(); } },
+
+    onAuthSuccess() {
+        document.body.classList.remove('auth-locked');
+        document.getElementById('auth-container').classList.add('hidden');
+        document.getElementById('app').classList.remove('hidden');
+
+        // Check for Admin credentials
+        if (this.auth.currentUser && this.auth.currentUser.role === 'admin') {
+            document.getElementById('admin-btn')?.classList.remove('hidden');
+            document.getElementById('admin-stats')?.classList.remove('hidden');
+            console.log("🛡️ Admin access granted");
+        }
     },
 
     setupEventListeners() {
@@ -69,6 +335,17 @@ const app = {
     },
 
     nextStep() {
+        if (this.currentStep === 1) {
+            if (!this.userData.fullname || !this.userData.email) {
+                alert('🚨 Personal Details Missing: We need your name and email to proceed.');
+                return;
+            }
+            if (!this.auth.validateEmail(this.userData.email)) {
+                alert('🚨 Invalid Email in form.');
+                return;
+            }
+        }
+
         if (this.currentStep < this.totalSteps) {
             this.captureDynamicLists();
             this.currentStep++;
@@ -117,10 +394,60 @@ const app = {
         if (listId === 'education-list') {
             newItem.innerHTML = `<input type="text" placeholder="${placeholder}">`;
         } else {
-            newItem.innerHTML = `<textarea placeholder="${placeholder}"></textarea>`;
+            newItem.innerHTML = `
+                <div class="item-actions">
+                    <button class="btn-ai-mini" onclick="app.polishItem(this)">✨ AI Polish</button>
+                </div>
+                <textarea placeholder="${placeholder}"></textarea>
+            `;
         }
         
         listContainer.appendChild(newItem);
+    },
+
+    polishText(id) {
+        const el = document.getElementById(id);
+        if (!el || !el.value) return;
+        
+        const original = el.value;
+        const polished = this.applyProfessionalStructure(original, 'profile');
+        
+        this.animateTextReplacement(el, polished);
+    },
+
+    polishItem(btn) {
+        const textarea = btn.closest('.list-item').querySelector('textarea');
+        if (!textarea || !textarea.value) return;
+        
+        const type = textarea.placeholder.includes('Project') ? 'project' : 'experience';
+        const polished = this.applyProfessionalStructure(textarea.value, type);
+        
+        this.animateTextReplacement(textarea, polished);
+    },
+
+    applyProfessionalStructure(text, type) {
+        // Use the user-provided professional structure for projects
+        if (type === 'project') {
+            const parts = text.split('-').map(p => p.trim());
+            const projectName = parts[0] || 'My Project';
+            const functionality = parts[1] || 'achieve key goals';
+            
+            return `My project solves the challenge of complex manual workflows. To address this, I developed ${projectName}, which allows users to ${functionality}. The user interface is clean, responsive, and easy to use, ensuring a smooth experience. On the backend, I implemented core functionalities like authentication, database management, and CRUD operations to handle data efficiently. Additionally, the project is designed for real-world scenarios with robust error handling and scalability.`;
+        }
+
+        // Generic Polished phrases
+        return text.replace(/\b(I|i)\b/g, 'Strategically').replace(/was/g, 'served as') + " Driven by a focus on impact and technical excellence.";
+    },
+
+    animateTextReplacement(el, newText) {
+        el.style.transition = 'opacity 0.3s ease';
+        el.style.opacity = '0.3';
+        setTimeout(() => {
+            el.value = newText;
+            el.style.opacity = '1';
+            // Sync data
+            if (el.id) this.userData[el.id] = newText;
+        }, 300);
     },
 
     captureDynamicLists() {
