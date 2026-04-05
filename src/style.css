@@ -369,6 +369,120 @@ h1, h2, h3 {
   font-weight: 300;
 }
 
+/* Features Section */
+.features-section {
+  padding: 8rem 5%;
+  background: var(--bg-darker);
+  position: relative;
+  z-index: 1;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.section-badge {
+  display: inline-block;
+  padding: 0.5rem 1.5rem;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  color: var(--secondary);
+  border-radius: 100px;
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 2rem;
+}
+
+.section-title {
+  font-size: 3.5rem;
+  margin-bottom: 5rem;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.2;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 2rem;
+}
+
+.feature-card {
+  text-align: left;
+  padding: 3rem;
+  border-radius: 40px;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+
+.feature-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  opacity: 0;
+  transition: var(--transition);
+  z-index: -1;
+  filter: blur(100px);
+}
+
+.feature-card:hover {
+  transform: translateY(-15px) scale(1.02);
+  border-color: var(--primary);
+  box-shadow: 0 40px 80px -20px rgba(79, 70, 229, 0.2);
+}
+
+.feature-card:hover::before {
+  opacity: 0.1;
+}
+
+.feature-icon {
+  font-size: 3rem;
+  margin-bottom: 2rem;
+  display: block;
+}
+
+.feature-card h3 {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  color: #fff;
+}
+
+.feature-card p {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+/* Animations */
+.reveal-on-scroll {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.8s ease, transform 0.8s ease;
+}
+
+.animate-in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.features-grid .feature-card:nth-child(2) { transition-delay: 0.1s; }
+.features-grid .feature-card:nth-child(3) { transition-delay: 0.2s; }
+.features-grid .feature-card:nth-child(4) { transition-delay: 0.3s; }
+.features-grid .feature-card:nth-child(5) { transition-delay: 0.4s; }
+.features-grid .feature-card:nth-child(6) { transition-delay: 0.5s; }
+
 /* Buttons */
 .btn {
   padding: 0.8rem 2rem;

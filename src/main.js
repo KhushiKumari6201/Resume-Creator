@@ -132,6 +132,7 @@ const app = {
         this.auth.checkSession();
         this.loadResumes(); 
         this.checkTheme();
+        this.setupScrollAnimations();
         console.log('✨ AIGraft initialized');
     },
 
@@ -319,16 +320,44 @@ const app = {
         });
     },
 
+    setupScrollAnimations() {
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('animate-in');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.feature-card, .section-title, .section-badge').forEach(el => {
+            el.classList.add('reveal-on-scroll');
+            observer.observe(el);
+        });
+    },
+
     startFlow() {
         const hero = document.getElementById('landing-hero');
+        const features = document.getElementById('features');
         const form = document.getElementById('form-container');
         
         hero.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
         hero.style.opacity = '0';
         hero.style.transform = 'translateY(-20px)';
+
+        if (features) {
+            features.style.transition = 'opacity 0.6s ease';
+            features.style.opacity = '0';
+        }
         
         setTimeout(() => {
             hero.classList.add('hidden');
+            if (features) features.classList.add('hidden');
             form.classList.remove('hidden');
             form.scrollIntoView({ behavior: 'smooth' });
         }, 600);
@@ -426,17 +455,26 @@ const app = {
     },
 
     applyProfessionalStructure(text, type) {
-        // Use the user-provided professional structure for projects
+        // AI detection of role/tech keywords
+        const isBackend = /\b(node|express|api|mongodb|sql|backend|server|java|python|aws)\b/i.test(text);
+        const isFrontend = /\b(react|vue|ui|ux|frontend|canvas|animation|css)\b/i.test(text);
+
         if (type === 'project') {
             const parts = text.split('-').map(p => p.trim());
-            const projectName = parts[0] || 'My Project';
-            const functionality = parts[1] || 'achieve key goals';
+            const projectName = parts[0] || 'Strategic Initiative';
+            const functionality = parts[1] || 'achieve mission-critical goals';
             
+            if (isBackend) {
+                return `Architected and deployed ${projectName}, a high-performance backend solution. Designed a scalable infrastructure from scratch, focusing on efficient data handling and secure API integrations. By leveraging robust database management and low-latency logic, I ensured the system could handle high-traffic scenarios while maintaining 99.9% uptime. The backend serves as the core engine, processing complex requests and ensuring seamless data flow across the entire platform.`;
+            }
+
             return `My project solves the challenge of complex manual workflows. To address this, I developed ${projectName}, which allows users to ${functionality}. The user interface is clean, responsive, and easy to use, ensuring a smooth experience. On the backend, I implemented core functionalities like authentication, database management, and CRUD operations to handle data efficiently. Additionally, the project is designed for real-world scenarios with robust error handling and scalability.`;
         }
 
         // Generic Polished phrases
-        return text.replace(/\b(I|i)\b/g, 'Strategically').replace(/was/g, 'served as') + " Driven by a focus on impact and technical excellence.";
+        let base = text.replace(/\b(I|i)\b/g, 'Strategically').replace(/was/g, 'served as');
+        if (isBackend) base += " Specialized in backend optimization and scalable architecture.";
+        return base + " Driven by a focus on impact and technical excellence.";
     },
 
     animateTextReplacement(el, newText) {
