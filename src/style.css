@@ -465,6 +465,28 @@ h1, h2, h3 {
   line-height: 1.6;
 }
 
+.feature-points {
+  margin-top: 1.5rem;
+  list-style: none;
+  text-align: left;
+}
+
+.feature-points li {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+  padding-left: 1.5rem;
+  position: relative;
+}
+
+.feature-points li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: var(--primary);
+  font-weight: 800;
+}
+
 /* Animations */
 .reveal-on-scroll {
   opacity: 0;
@@ -475,6 +497,127 @@ h1, h2, h3 {
 .animate-in {
   opacity: 1;
   transform: translateY(0);
+}
+
+#feature-detail-overlay {
+  padding: 8rem 5%;
+  min-height: 80vh;
+  background: var(--bg-dark);
+}
+
+.detail-container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 5rem;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 40px;
+  text-align: left;
+}
+
+.btn-back {
+  background: var(--glass-heavy);
+  color: var(--primary);
+  border: 1px solid var(--glass-border);
+  padding: 0.6rem 1.5rem;
+  border-radius: 100px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-bottom: 3rem;
+  transition: var(--transition);
+}
+
+.btn-back:hover {
+  background: var(--primary);
+  color: white;
+  transform: translateX(-5px);
+}
+
+.f-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  margin-bottom: 2.5rem;
+}
+
+.f-detail-icon {
+  font-size: 5rem;
+  background: var(--glass-heavy);
+  width: 120px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 30px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+}
+
+.f-detail-header h1 {
+  font-size: 4rem;
+  background: var(--gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.f-detail-desc {
+  font-size: 1.5rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  max-width: 800px;
+  margin-bottom: 4rem;
+}
+
+.f-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+.f-h-item {
+  background: rgba(255, 255, 255, 0.02);
+  padding: 1.5rem 2rem;
+  border-radius: 20px;
+  border-left: 4px solid var(--primary);
+  font-size: 1.1rem;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.f-h-item span {
+  color: var(--green);
+  font-weight: 900;
+}
+
+.card-footer-info {
+  margin-top: 2rem;
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  opacity: 0.8;
+}
+
+.feature-card:hover .card-footer-info {
+  opacity: 1;
+  transform: translateX(5px);
+  transition: var(--transition);
+}
+
+/* Icons Fix */
+.logo-icon {
+  display: inline-block;
+  transform: rotate(45deg);
+  margin-right: 0.5rem;
+}
+
+@media (max-width: 768px) {
+  .f-detail-grid { grid-template-columns: 1fr; }
+  .f-detail-header h1 { font-size: 2.5rem; }
+  .detail-container { padding: 2rem; }
 }
 
 .features-grid .feature-card:nth-child(2) { transition-delay: 0.1s; }
@@ -905,3 +1048,134 @@ textarea {
 .port-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; }
 .port-card { background: #111; padding: 2rem; border-radius: 20px; border: 1px solid #333; transition: transform 0.3s ease; }
 .port-card:hover { transform: translateY(-10px); border-color: #4f46e5; }
+
+/* Job Tracker Specific Styles */
+.job-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  background: var(--glass-heavy);
+  border: 1px solid var(--glass-border);
+  padding: 1.5rem;
+  border-radius: 16px;
+  text-align: center;
+}
+
+.stat-title {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.stat-value {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: white;
+}
+
+.job-view-container {
+  margin-top: 2rem;
+}
+
+.job-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: white;
+}
+
+.job-table th, .job-table td {
+  padding: 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.job-table th {
+  background: rgba(255,255,255,0.05);
+  font-weight: 600;
+}
+
+.job-table tbody tr:hover {
+  background: rgba(255,255,255,0.02);
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.3rem 0.8rem;
+  border-radius: 100px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.status-pending { background: rgba(253, 224, 71, 0.1); color: #fde047; }
+.status-interview { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+.status-offer { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+.status-rejected { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+
+.kanban-board {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+  overflow-x: auto;
+  padding-bottom: 1rem;
+}
+
+.kanban-column {
+  background: rgba(0,0,0,0.2);
+  border-radius: 16px;
+  padding: 1rem;
+  border: 1px solid var(--glass-border);
+  min-width: 250px;
+}
+
+.kb-header {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.kb-card {
+  background: var(--glass-heavy);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.kb-card-title { font-weight: 700; margin-bottom: 0.25rem; font-size: 1.1rem;}
+.kb-card-company { color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 0.5rem; }
+.kb-card-date { font-size: 0.8rem; color: #888; margin-bottom: 1rem; }
+.kb-card-actions { display: flex; gap: 0.5rem; }
+
+.modal {
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.8);
+  backdrop-filter: blur(5px);
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-content {
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 2rem;
+  background: var(--bg-darker);
+}
+
+@media (max-width: 1024px) {
+  .kanban-board { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 600px) {
+  .kanban-board { grid-template-columns: 1fr; }
+}

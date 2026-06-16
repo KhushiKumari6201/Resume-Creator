@@ -126,11 +126,230 @@ const app = {
         }
     },
 
+    jobs: {
+        data: [],
+        currentView: 'table',
+        searchQuery: '',
+        filterStatus: 'all',
+        editingId: null,
+
+        loadJobs() {
+            const saved = localStorage.getItem('aigraft_jobs');
+            if (saved) {
+                this.data = JSON.parse(saved);
+            }
+        },
+
+        saveJob() {
+            const company = document.getElementById('job-company').value.trim();
+            const role = document.getElementById('job-role').value.trim();
+            const date = document.getElementById('job-date').value;
+            const status = document.getElementById('job-status').value;
+            const resumeId = document.getElementById('job-resume').value;
+            const link = document.getElementById('job-link').value.trim();
+            const notes = document.getElementById('job-notes').value.trim();
+
+            if (!company || !role) {
+                alert('🚨 Please enter both Company Name and Job Role.');
+                return;
+            }
+
+            const jobEntry = {
+                id: this.editingId || Date.now().toString(),
+                company,
+                role,
+                date: date || new Date().toISOString().split('T')[0],
+                status,
+                resumeId,
+                link,
+                notes,
+                updatedAt: new Date().toISOString()
+            };
+
+            if (this.editingId) {
+                const idx = this.data.findIndex(j => j.id === this.editingId);
+                if (idx > -1) this.data[idx] = jobEntry;
+                this.editingId = null;
+                alert('Job updated successfully!');
+            } else {
+                this.data.unshift(jobEntry);
+                alert('New job added to tracker! 🚀');
+            }
+
+            localStorage.setItem('aigraft_jobs', JSON.stringify(this.data));
+            this.closeModal();
+            this.render();
+        },
+
+        deleteJob(id) {
+            if (confirm('Are you sure you want to delete this job application?')) {
+                this.data = this.data.filter(j => j.id !== id);
+                localStorage.setItem('aigraft_jobs', JSON.stringify(this.data));
+                this.render();
+            }
+        },
+
+        editJob(id) {
+            const job = this.data.find(j => j.id === id);
+            if (!job) return;
+            
+            this.editingId = id;
+            document.getElementById('job-modal-title').textContent = 'Edit Job Application';
+            document.getElementById('job-company').value = job.company;
+            document.getElementById('job-role').value = job.role;
+            document.getElementById('job-date').value = job.date;
+            document.getElementById('job-status').value = job.status;
+            document.getElementById('job-link').value = job.link || '';
+            document.getElementById('job-notes').value = job.notes || '';
+            
+            this.populateResumeDropdown(job.resumeId);
+            
+            document.getElementById('job-modal').classList.remove('hidden');
+        },
+
+        openModal() {
+            this.editingId = null;
+            document.getElementById('job-modal-title').textContent = 'Add Job Application';
+            document.getElementById('job-company').value = '';
+            document.getElementById('job-role').value = '';
+            document.getElementById('job-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('job-status').value = 'pending';
+            document.getElementById('job-link').value = '';
+            document.getElementById('job-notes').value = '';
+            
+            this.populateResumeDropdown();
+            
+            document.getElementById('job-modal').classList.remove('hidden');
+        },
+
+        closeModal() {
+            document.getElementById('job-modal').classList.add('hidden');
+        },
+
+        populateResumeDropdown(selectedId = '') {
+            const select = document.getElementById('job-resume');
+            select.innerHTML = '<option value="">-- Select a Resume --</option>' + 
+                app.resumes.map(r => `<option value="${r.id}" ${r.id === selectedId ? 'selected' : ''}>${r.fullname} - ${r.jobtitle} (${r.template})</option>`).join('');
+        },
+
+        showJobTracker() {
+            document.querySelectorAll('section, header').forEach(s => s.classList.add('hidden'));
+            document.getElementById('job-tracker-section').classList.remove('hidden');
+            this.render();
+        },
+
+        switchView(view) {
+            this.currentView = view;
+            document.getElementById('btn-view-table').classList.toggle('active', view === 'table');
+            document.getElementById('btn-view-kanban').classList.toggle('active', view === 'kanban');
+            
+            document.getElementById('job-table-view').classList.toggle('hidden', view !== 'table');
+            document.getElementById('job-kanban-view').classList.toggle('hidden', view !== 'kanban');
+        },
+
+        onSearch(val) {
+            this.searchQuery = val.toLowerCase();
+            this.render();
+        },
+
+        onFilter(val) {
+            this.filterStatus = val;
+            this.render();
+        },
+
+        getFilteredJobs() {
+            return this.data.filter(j => {
+                const matchesSearch = !this.searchQuery || 
+                    j.company.toLowerCase().includes(this.searchQuery) ||
+                    j.role.toLowerCase().includes(this.searchQuery);
+                const matchesFilter = this.filterStatus === 'all' || j.status === this.filterStatus;
+                return matchesSearch && matchesFilter;
+            });
+        },
+
+        updateStats() {
+            document.getElementById('stat-total').textContent = this.data.length;
+            document.getElementById('stat-interviews').textContent = this.data.filter(j => j.status === 'interview').length;
+            document.getElementById('stat-offers').textContent = this.data.filter(j => j.status === 'offer').length;
+            document.getElementById('stat-rejected').textContent = this.data.filter(j => j.status === 'rejected').length;
+        },
+
+        getStatusBadge(status) {
+            const map = {
+                'pending': '<span class="status-badge status-pending">🟡 Pending</span>',
+                'interview': '<span class="status-badge status-interview">🔵 Interview</span>',
+                'offer': '<span class="status-badge status-offer">🟢 Offer</span>',
+                'rejected': '<span class="status-badge status-rejected">🔴 Rejected</span>'
+            };
+            return map[status] || map['pending'];
+        },
+        
+        getResumeName(id) {
+            if(!id) return '-';
+            const r = app.resumes.find(res => res.id === id);
+            return r ? `${r.fullname} (${r.template})` : 'Deleted Resume';
+        },
+
+        render() {
+            this.updateStats();
+            
+            const filtered = this.getFilteredJobs();
+            const emptyState = document.getElementById('job-empty-state');
+            
+            if (this.data.length === 0) {
+                emptyState.classList.remove('hidden');
+                document.getElementById('job-table-view').classList.add('hidden');
+                document.getElementById('job-kanban-view').classList.add('hidden');
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+                this.switchView(this.currentView);
+            }
+
+            // Render Table
+            const tbody = document.getElementById('job-table-body');
+            tbody.innerHTML = filtered.map(j => `
+                <tr>
+                    <td style="font-weight:bold">${j.company}</td>
+                    <td>${j.role}</td>
+                    <td>${j.date}</td>
+                    <td>${this.getStatusBadge(j.status)}</td>
+                    <td><span style="font-size:0.85rem; color:#aaa;">${this.getResumeName(j.resumeId)}</span></td>
+                    <td>
+                        <button class="btn btn-secondary btn-small" onclick="app.jobs.editJob('${j.id}')">Edit</button>
+                        <button class="btn btn-ghost btn-small" style="color:var(--red)" onclick="app.jobs.deleteJob('${j.id}')">Delete</button>
+                    </td>
+                </tr>
+            `).join('') || '<tr><td colspan="6" style="text-align:center; padding: 2rem;">No jobs match your search/filter.</td></tr>';
+
+            // Render Kanban
+            const columns = { pending: '', interview: '', offer: '', rejected: '' };
+            filtered.forEach(j => {
+                columns[j.status] += `
+                    <div class="kb-card glass-card">
+                        <div class="kb-card-title">${j.role}</div>
+                        <div class="kb-card-company">${j.company}</div>
+                        <div class="kb-card-date">📅 ${j.date}</div>
+                        <div class="kb-card-actions">
+                            <button class="btn btn-secondary btn-small" style="padding: 0.2rem 0.5rem; font-size: 0.8rem;" onclick="app.jobs.editJob('${j.id}')">Edit</button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            ['pending', 'interview', 'offer', 'rejected'].forEach(status => {
+                const el = document.querySelector(`#kb-${status} .kb-cards`);
+                if(el) el.innerHTML = columns[status];
+            });
+        }
+    },
+
     // Initialization
     init() {
         this.setupEventListeners();
         this.auth.checkSession();
         this.loadResumes(); 
+        this.jobs.loadJobs();
         this.checkTheme();
         this.setupScrollAnimations();
         console.log('✨ AIGraft initialized');
@@ -651,6 +870,116 @@ const app = {
     backToPreview() {
         document.getElementById('portfolio-section').classList.add('hidden');
         document.getElementById('preview-section').classList.remove('hidden');
+    },
+
+    showFeature(id) {
+        const data = {
+            ai: {
+                title: "AI Polishing Engine",
+                icon: "🤖",
+                desc: "Our neural network analyzes your resume against 50,000+ job descriptions to provide pixel-perfect copy.",
+                highlights: [
+                    "Context-aware action verb suggestions",
+                    "ATS keyword density optimization",
+                    "Professional tone normalization",
+                    "Grammar & impact scoring"
+                ]
+            },
+            templates: {
+                title: "Designer Templates",
+                icon: "🎨",
+                desc: "Every template is battle-tested against major ATS systems like Workday, Greenhouse, and Lever.",
+                highlights: [
+                    "Multi-column & single-column options",
+                    "High-contrast print modes",
+                    "Dynamic theme branding",
+                    "Zero-config layout management"
+                ]
+            },
+            portfolios: {
+                title: "Interactive Web Portfolios",
+                icon: "🌐",
+                desc: "Turn your PDF into a live web experience that recruiters can interact with in real-time.",
+                highlights: [
+                    "Custom shareable links",
+                    "Mobile-optimized views",
+                    "Project display carousel",
+                    "Dark/Light mode persistence"
+                ]
+            },
+            insights: {
+                title: "Strategic AI Insights",
+                icon: "📊",
+                desc: "Get an edge with real-time feedback on your professional narrative.",
+                highlights: [
+                    "Real-time recruiter-view simulation",
+                    "Industry-specific skill gap analysis",
+                    "Impact metric suggestions",
+                    "Confidence score tracker"
+                ]
+            },
+            dashboard: {
+                title: "Central Command Center",
+                icon: "🔒",
+                desc: "One place for all your career documents, synchronized across all your devices.",
+                highlights: [
+                    "End-to-end data encryption",
+                    "Auto-sync to cloud storage",
+                    "Version history snapshotting",
+                    "Bulk export capabilities"
+                ]
+            },
+            backend: {
+                title: "Enterprise Architecture",
+                icon: "⚙️",
+                desc: "Powered by a high-performance backend infrastructure designed for speed and reliability.",
+                highlights: [
+                    "High-concurrency processing",
+                    "Global edge distribution",
+                    "Zero-trust security model",
+                    "99.99% infrastructure uptime"
+                ]
+            },
+            pdf: {
+                title: "High-Fidelity PDF Engine",
+                icon: "📄",
+                desc: "Professional-grade PDF generation that looks perfect on every screen and printer.",
+                highlights: [
+                    "Custom margin & font controls",
+                    "CMYK color support for printing",
+                    "Embedded metadata for SEO",
+                    "Vector-perfect text rendering"
+                ]
+            }
+        };
+
+        const f = data[id];
+        if (!f) return;
+
+        const container = document.getElementById('detail-content');
+        const overlay = document.getElementById('feature-detail-overlay');
+        const featuresSection = document.getElementById('features');
+
+        container.innerHTML = `
+            <div class="f-detail-header">
+                <div class="f-detail-icon">${f.icon}</div>
+                <h1>${f.title}</h1>
+            </div>
+            <p class="f-detail-desc">${f.desc}</p>
+            <div class="f-detail-grid">
+                ${f.highlights.map(h => `<div class="f-h-item"><span>✓</span> ${h}</div>`).join('')}
+            </div>
+        `;
+
+        featuresSection.classList.add('hidden');
+        overlay.classList.remove('hidden');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    },
+
+    hideFeatureDetail() {
+        document.getElementById('feature-detail-overlay').classList.add('hidden');
+        document.getElementById('features').classList.remove('hidden');
+        document.getElementById('features').scrollIntoView({ behavior: 'smooth' });
     },
 
     regenerateSuggestions() {

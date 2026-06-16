@@ -13,7 +13,7 @@
     <div id="auth-container">
         <div class="auth-card glass-card">
             <div class="logo">
-                <span class="logo-icon">✨</span>
+                <span class="logo-icon">🚀</span>
                 <span class="logo-text">AIGraft</span>
             </div>
             
@@ -85,12 +85,13 @@
             </div>
             <nav class="glass-nav">
                 <div class="logo">
-                    <span class="logo-icon">✨</span>
+                    <span class="logo-icon">🚀</span>
                     <span class="logo-text">AIGraft</span>
                 </div>
                 <div class="nav-links">
                     <a href="#features">Features</a>
                     <button class="btn btn-ghost" onclick="app.showDashboard()">My Resumes</button>
+                    <button class="btn btn-ghost" onclick="app.jobs.showJobTracker()">Job Tracker</button>
                     <button id="theme-toggle" class="btn btn-ghost" onclick="app.toggleTheme()">🌙</button>
                     <button id="admin-btn" class="btn btn-secondary hidden" onclick="app.admin.openDashboard()">Admin Tools</button>
                     <button class="btn btn-ghost" onclick="app.auth.logout()">Logout</button>
@@ -121,42 +122,57 @@
                 <div class="section-badge">Premium Features</div>
                 <h2 class="section-title">Everything you need to <span class="gradient-text">land your dream job</span></h2>
                 <div class="features-grid">
-                    <div class="feature-card glass-card">
+                    <div class="feature-card glass-card" onclick="app.showFeature('ai')">
                         <div class="feature-icon">🤖</div>
-                        <h3>AI polishing</h3>
-                        <p>Our intelligent AI transforms your raw experiences into compelling, professional narratives that catch recruiters' eyes.</p>
+                        <h3>AI Polishing</h3>
+                        <p>Our intelligent AI transforms your raw experiences into compelling narratives.</p>
+                        <div class="card-footer-info">Read More →</div>
                     </div>
-                    <div class="feature-card glass-card">
+                    <div class="feature-card glass-card" onclick="app.showFeature('templates')">
                         <div class="feature-icon">🎨</div>
                         <h3>Modern Templates</h3>
-                        <p>Choose from a library of ATS-friendly templates designed by industry experts to ensure your resume passes every filter.</p>
+                        <p>Choose from a library of ATS-friendly designs that pass every filter.</p>
+                        <div class="card-footer-info">Read More →</div>
                     </div>
-                    <div class="feature-card glass-card">
+                    <div class="feature-card glass-card" onclick="app.showFeature('portfolios')">
                         <div class="feature-icon">🌐</div>
                         <h3>Interactive Portfolios</h3>
-                        <p>One-click transformation from a static resume to a stunning, modern personal portfolio website to showcase your work.</p>
+                        <p>Transform static resumes into stunning, modern personal websites.</p>
+                        <div class="card-footer-info">Read More →</div>
                     </div>
-                    <div class="feature-card glass-card">
+                    <div class="feature-card glass-card" onclick="app.showFeature('insights')">
                         <div class="feature-icon">📊</div>
                         <h3>Smart Insights</h3>
-                        <p>Get real-time feedback and suggestions on how to improve your content based on current industry trends.</p>
+                        <p>Get real-time feedback and keyword optimization suggestions.</p>
+                        <div class="card-footer-info">Read More →</div>
                     </div>
-                    <div class="feature-card glass-card">
+                    <div class="feature-card glass-card" onclick="app.showFeature('dashboard')">
                         <div class="feature-icon">🔒</div>
                         <h3>Secure Dashboard</h3>
-                        <p>Cloud-based management for all your resumes. Edit, delete, or duplicate your profiles anytime, anywhere.</p>
+                        <p>Manage all your resumes in one secure, cloud-synced location.</p>
+                        <div class="card-footer-info">Read More →</div>
                     </div>
-                    <div class="feature-card glass-card">
-                        <div class="feature-icon">🛡️</div>
-                        <h3>Enterprise Backend</h3>
-                        <p>Our robust architecture ensures ultra-fast processing, secure API handling, and end-to-end encryption for all your professional data.</p>
+                    <div class="feature-card glass-card" onclick="app.showFeature('backend')">
+                        <div class="feature-icon">⚙️</div>
+                        <h3>Enterprise Core</h3>
+                        <p>Robust architecture ensuring ultra-fast processing and security.</p>
+                        <div class="card-footer-info">Read More →</div>
                     </div>
-                    <div class="feature-card glass-card">
+                    <div class="feature-card glass-card" onclick="app.showFeature('pdf')">
                         <div class="feature-icon">📄</div>
-                        <h3>Instant PDF Export</h3>
-                        <p>Download high-resolution, print-ready PDFs with perfect formatting that looks great on any screen or paper.</p>
+                        <h3>Instant Export</h3>
+                        <p>Download pixel-perfect PDFs with custom formatting options.</p>
+                        <div class="card-footer-info">Read More →</div>
                     </div>
                 </div>
+            </div>
+        </section>
+
+        <!-- Feature Detail Overlay -->
+        <section id="feature-detail-overlay" class="hidden">
+            <div class="detail-container glass-card reveal-on-scroll animate-in">
+                <button class="btn-back" onclick="app.hideFeatureDetail()">← Back to All Features</button>
+                <div id="detail-content"></div>
             </div>
         </section>
 
@@ -186,6 +202,149 @@
                 </div>
             </div>
         </section>
+
+        <!-- Job Tracker Section -->
+        <section id="job-tracker-section" class="hidden">
+            <div class="dashboard-wrapper glass-card">
+                <div class="dashboard-header" style="flex-direction: column; align-items: stretch; gap: 1.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h2>Job Tracker</h2>
+                        <button class="btn btn-primary" onclick="app.jobs.openModal()">+ Add Job</button>
+                    </div>
+                    
+                    <!-- Stats Grid -->
+                    <div class="job-stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-title">📨 Total Applied</div>
+                            <div class="stat-value" id="stat-total">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-title">🔵 Interviews</div>
+                            <div class="stat-value" id="stat-interviews">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-title">🟢 Offers</div>
+                            <div class="stat-value" id="stat-offers">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-title">🔴 Rejected</div>
+                            <div class="stat-value" id="stat-rejected">0</div>
+                        </div>
+                    </div>
+
+                    <!-- Search, Filter & View Toggle -->
+                    <div class="search-filter-row" style="flex-wrap: wrap;">
+                        <input type="text" id="job-search" placeholder="Search company or role..." oninput="app.jobs.onSearch(this.value)">
+                        <select id="job-status-filter" onchange="app.jobs.onFilter(this.value)">
+                            <option value="all">All Statuses</option>
+                            <option value="pending">🟡 Pending</option>
+                            <option value="interview">🔵 Interview Scheduled</option>
+                            <option value="offer">🟢 Offer Received</option>
+                            <option value="rejected">🔴 Rejected</option>
+                        </select>
+                        <div class="view-toggles" style="display: flex; gap: 0.5rem; margin-left: auto;">
+                            <button class="btn btn-secondary btn-small active" id="btn-view-table" onclick="app.jobs.switchView('table')">Table</button>
+                            <button class="btn btn-secondary btn-small" id="btn-view-kanban" onclick="app.jobs.switchView('kanban')">Kanban</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Job Empty State -->
+                <div id="job-empty-state" class="empty-state hidden">
+                    No jobs tracked yet. Start by adding your first application! 🚀
+                </div>
+
+                <!-- Table View -->
+                <div id="job-table-view" class="job-view-container" style="overflow-x: auto;">
+                    <table class="job-table">
+                        <thead>
+                            <tr>
+                                <th>Company</th>
+                                <th>Role</th>
+                                <th>Date Applied</th>
+                                <th>Status</th>
+                                <th>Resume Used</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="job-table-body">
+                            <!-- Rows injected via JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Kanban View -->
+                <div id="job-kanban-view" class="job-view-container hidden">
+                    <div class="kanban-board">
+                        <div class="kanban-column" id="kb-pending">
+                            <div class="kb-header" style="color: var(--yellow);">🟡 Pending</div>
+                            <div class="kb-cards"></div>
+                        </div>
+                        <div class="kanban-column" id="kb-interview">
+                            <div class="kb-header" style="color: var(--primary);">🔵 Interview</div>
+                            <div class="kb-cards"></div>
+                        </div>
+                        <div class="kanban-column" id="kb-offer">
+                            <div class="kb-header" style="color: var(--green);">🟢 Offer</div>
+                            <div class="kb-cards"></div>
+                        </div>
+                        <div class="kanban-column" id="kb-rejected">
+                            <div class="kb-header" style="color: var(--red);">🔴 Rejected</div>
+                            <div class="kb-cards"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Job Modal -->
+        <div id="job-modal" class="modal hidden">
+            <div class="modal-content glass-card">
+                <h2 id="job-modal-title" style="margin-bottom: 1.5rem;">Add Job Application</h2>
+                <div class="input-grid" style="display: flex; flex-direction: column; gap: 1rem;">
+                    <div class="input-group">
+                        <label>Company Name *</label>
+                        <input type="text" id="job-company" placeholder="e.g., Google">
+                    </div>
+                    <div class="input-group">
+                        <label>Job Role / Title *</label>
+                        <input type="text" id="job-role" placeholder="e.g., Frontend Developer">
+                    </div>
+                    <div class="input-group">
+                        <label>Date Applied *</label>
+                        <input type="date" id="job-date">
+                    </div>
+                    <div class="input-group">
+                        <label>Application Status</label>
+                        <select id="job-status">
+                            <option value="pending">🟡 Pending</option>
+                            <option value="interview">🔵 Interview Scheduled</option>
+                            <option value="offer">🟢 Offer Received</option>
+                            <option value="rejected">🔴 Rejected</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Resume Version Used</label>
+                        <select id="job-resume">
+                            <option value="">-- Select a Resume --</option>
+                            <!-- Options injected via JS -->
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Job Link (Optional)</label>
+                        <input type="url" id="job-link" placeholder="https://...">
+                    </div>
+                    <div class="input-group full-width">
+                        <label>Notes (Optional)</label>
+                        <textarea id="job-notes" placeholder="HR contacted on WhatsApp..." rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1.5rem;">
+                    <button class="btn btn-ghost" onclick="app.jobs.closeModal()">Cancel</button>
+                    <button class="btn btn-primary" onclick="app.jobs.saveJob()">Save Job</button>
+                </div>
+            </div>
+        </div>
 
         <!-- Multi-step Form Container -->
         <section id="form-container" class="hidden">
