@@ -209,7 +209,10 @@
                 <div class="dashboard-header" style="flex-direction: column; align-items: stretch; gap: 1.5rem;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <h2>Job Tracker</h2>
-                        <button class="btn btn-primary" onclick="app.jobs.openModal()">+ Add Job</button>
+                        <div style="display: flex; gap: 1rem;">
+                            <button class="btn btn-secondary" onclick="app.jobs.exportCSV()">Export CSV</button>
+                            <button class="btn btn-primary" onclick="app.jobs.openModal()">+ Add Job</button>
+                        </div>
                     </div>
                     
                     <!-- Stats Grid -->
@@ -229,6 +232,23 @@
                         <div class="stat-card">
                             <div class="stat-title">🔴 Rejected</div>
                             <div class="stat-value" id="stat-rejected">0</div>
+                        </div>
+                    </div>
+
+                    <!-- Follow-up Banner -->
+                    <div id="job-followup-banner" class="hidden" style="background: rgba(239, 68, 68, 0.1); border: 1px solid var(--red); color: var(--red); padding: 1rem; border-radius: 12px; font-weight: 600; text-align: center; margin-bottom: 1.5rem;">
+                        🔔 You have <span id="followup-count">0</span> jobs that need follow-up today!
+                    </div>
+
+                    <!-- Analytics Grid -->
+                    <div id="job-analytics-section" class="hidden" style="display: grid; grid-template-columns: 1fr 2fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                        <div class="glass-card" style="padding: 1.5rem; border-radius: 16px;">
+                            <h3 style="margin-bottom: 1rem; font-size: 1.1rem; text-align: center;">Status Breakdown</h3>
+                            <canvas id="job-pie-chart" style="max-height: 250px;"></canvas>
+                        </div>
+                        <div class="glass-card" style="padding: 1.5rem; border-radius: 16px;">
+                            <h3 style="margin-bottom: 1rem; font-size: 1.1rem; text-align: center;">Applications Timeline</h3>
+                            <canvas id="job-bar-chart" style="max-height: 250px;"></canvas>
                         </div>
                     </div>
 
@@ -302,41 +322,111 @@
             <div class="modal-content glass-card">
                 <h2 id="job-modal-title" style="margin-bottom: 1.5rem;">Add Job Application</h2>
                 <div class="input-grid" style="display: flex; flex-direction: column; gap: 1rem;">
-                    <div class="input-group">
-                        <label>Company Name *</label>
-                        <input type="text" id="job-company" placeholder="e.g., Google">
+                    <!-- Row 1 -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="input-group">
+                            <label>Company Name *</label>
+                            <input type="text" id="job-company" placeholder="e.g., Google">
+                        </div>
+                        <div class="input-group">
+                            <label>Job Role / Title *</label>
+                            <input type="text" id="job-role" placeholder="e.g., Frontend Developer">
+                        </div>
                     </div>
-                    <div class="input-group">
-                        <label>Job Role / Title *</label>
-                        <input type="text" id="job-role" placeholder="e.g., Frontend Developer">
+                    
+                    <!-- Row 2 -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                        <div class="input-group">
+                            <label>Date Applied *</label>
+                            <input type="date" id="job-date">
+                        </div>
+                        <div class="input-group">
+                            <label>Application Status</label>
+                            <select id="job-status" onchange="app.jobs.toggleInterviewDate()">
+                                <option value="pending">🟡 Pending</option>
+                                <option value="interview">🔵 Interview Scheduled</option>
+                                <option value="offer">🟢 Offer Received</option>
+                                <option value="rejected">🔴 Rejected</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>Priority</label>
+                            <select id="job-priority">
+                                <option value="medium">🟡 Medium</option>
+                                <option value="high">🔴 High</option>
+                                <option value="low">🟢 Low</option>
+                            </select>
+                        </div>
                     </div>
-                    <div class="input-group">
-                        <label>Date Applied *</label>
-                        <input type="date" id="job-date">
+
+                    <!-- Conditional Interview Date -->
+                    <div class="input-group hidden" id="interview-date-group">
+                        <label>Interview Date & Time</label>
+                        <input type="datetime-local" id="job-interview-date">
                     </div>
-                    <div class="input-group">
-                        <label>Application Status</label>
-                        <select id="job-status">
-                            <option value="pending">🟡 Pending</option>
-                            <option value="interview">🔵 Interview Scheduled</option>
-                            <option value="offer">🟢 Offer Received</option>
-                            <option value="rejected">🔴 Rejected</option>
-                        </select>
+
+                    <!-- Row 3 -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="input-group">
+                            <label>Salary Range (Optional)</label>
+                            <input type="text" id="job-salary" placeholder="e.g., 8 LPA - 12 LPA">
+                        </div>
+                        <div class="input-group">
+                            <label>Source (Optional)</label>
+                            <select id="job-source">
+                                <option value="">Select Source...</option>
+                                <option value="LinkedIn">LinkedIn</option>
+                                <option value="Naukri">Naukri</option>
+                                <option value="Indeed">Indeed</option>
+                                <option value="Company Website">Company Website</option>
+                                <option value="Referral">Referral</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
                     </div>
-                    <div class="input-group">
-                        <label>Resume Version Used</label>
-                        <select id="job-resume">
-                            <option value="">-- Select a Resume --</option>
-                            <!-- Options injected via JS -->
-                        </select>
+
+                    <!-- Row 4 -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="input-group">
+                            <label>Contact Person (Optional)</label>
+                            <input type="text" id="job-contact-name" placeholder="e.g., Priya Sharma (HR)">
+                        </div>
+                        <div class="input-group">
+                            <label>Contact Email (Optional)</label>
+                            <input type="email" id="job-contact-email" placeholder="hr@company.com">
+                        </div>
                     </div>
-                    <div class="input-group">
+
+                    <!-- Row 5 -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="input-group">
+                            <label>Resume Version Used</label>
+                            <select id="job-resume">
+                                <option value="">-- Select a Resume --</option>
+                                <!-- Options injected via JS -->
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>Follow-up Date</label>
+                            <input type="date" id="job-followup-date">
+                        </div>
+                    </div>
+
+                    <div class="input-group full-width">
                         <label>Job Link (Optional)</label>
                         <input type="url" id="job-link" placeholder="https://...">
                     </div>
+                    
+                    <!-- Notes Timeline -->
                     <div class="input-group full-width">
-                        <label>Notes (Optional)</label>
-                        <textarea id="job-notes" placeholder="HR contacted on WhatsApp..." rows="3"></textarea>
+                        <label>Timeline & Notes</label>
+                        <div id="job-notes-timeline" style="max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); border-radius: 8px; padding: 1rem; margin-bottom: 0.5rem;">
+                            <!-- Notes injected via JS -->
+                        </div>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <input type="text" id="new-job-note" placeholder="Type a note (e.g. Got call from HR...)" style="flex: 1;">
+                            <button class="btn btn-secondary" onclick="app.jobs.addNoteUI(event)">Add Note</button>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1.5rem;">
@@ -498,6 +588,7 @@
         </footer>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script type="module" src="/src/main.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </body>

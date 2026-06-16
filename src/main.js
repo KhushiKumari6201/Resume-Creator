@@ -132,11 +132,20 @@ const app = {
         searchQuery: '',
         filterStatus: 'all',
         editingId: null,
+        tempNotes: [],
+        charts: { pie: null, bar: null },
 
         loadJobs() {
             const saved = localStorage.getItem('aigraft_jobs');
             if (saved) {
                 this.data = JSON.parse(saved);
+                // Backward compatibility: Convert string notes to array format
+                this.data.forEach(j => {
+                    if (typeof j.notes === 'string') {
+                        j.notes = j.notes.trim() ? [{ text: j.notes, date: j.updatedAt || new Date().toISOString() }] : [];
+                    }
+                    if (!j.priority) j.priority = 'medium';
+                });
             }
         },
 
@@ -147,11 +156,26 @@ const app = {
             const status = document.getElementById('job-status').value;
             const resumeId = document.getElementById('job-resume').value;
             const link = document.getElementById('job-link').value.trim();
-            const notes = document.getElementById('job-notes').value.trim();
+            
+            // New fields
+            const priority = document.getElementById('job-priority').value;
+            const interviewDate = document.getElementById('job-interview-date').value;
+            const salary = document.getElementById('job-salary').value.trim();
+            const source = document.getElementById('job-source').value;
+            const contactName = document.getElementById('job-contact-name').value.trim();
+            const contactEmail = document.getElementById('job-contact-email').value.trim();
+            const followupDate = document.getElementById('job-followup-date').value;
 
             if (!company || !role) {
                 alert('🚨 Please enter both Company Name and Job Role.');
                 return;
+            }
+
+            // Check if there is a pending note that hasn't been added yet
+            const pendingNote = document.getElementById('new-job-note').value.trim();
+            if (pendingNote) {
+                this.tempNotes.push({ text: pendingNote, date: new Date().toISOString() });
+                document.getElementById('new-job-note').value = '';
             }
 
             const jobEntry = {
@@ -162,7 +186,14 @@ const app = {
                 status,
                 resumeId,
                 link,
-                notes,
+                priority,
+                interviewDate: status === 'interview' ? interviewDate : '',
+                salary,
+                source,
+                contactName,
+                contactEmail,
+                followupDate,
+                notes: this.tempNotes,
                 updatedAt: new Date().toISOString()
             };
 
@@ -200,9 +231,21 @@ const app = {
             document.getElementById('job-date').value = job.date;
             document.getElementById('job-status').value = job.status;
             document.getElementById('job-link').value = job.link || '';
-            document.getElementById('job-notes').value = job.notes || '';
+            
+            // New fields
+            document.getElementById('job-priority').value = job.priority || 'medium';
+            document.getElementById('job-interview-date').value = job.interviewDate || '';
+            document.getElementById('job-salary').value = job.salary || '';
+            document.getElementById('job-source').value = job.source || '';
+            document.getElementById('job-contact-name').value = job.contactName || '';
+            document.getElementById('job-contact-email').value = job.contactEmail || '';
+            document.getElementById('job-followup-date').value = job.followupDate || '';
+            
+            this.tempNotes = [...(job.notes || [])];
+            this.renderTimeline();
             
             this.populateResumeDropdown(job.resumeId);
+            this.toggleInterviewDate();
             
             document.getElementById('job-modal').classList.remove('hidden');
         },
@@ -215,15 +258,72 @@ const app = {
             document.getElementById('job-date').value = new Date().toISOString().split('T')[0];
             document.getElementById('job-status').value = 'pending';
             document.getElementById('job-link').value = '';
-            document.getElementById('job-notes').value = '';
+            
+            // New fields reset
+            document.getElementById('job-priority').value = 'medium';
+            document.getElementById('job-interview-date').value = '';
+            document.getElementById('job-salary').value = '';
+            document.getElementById('job-source').value = '';
+            document.getElementById('job-contact-name').value = '';
+            document.getElementById('job-contact-email').value = '';
+            document.getElementById('job-followup-date').value = '';
+            document.getElementById('new-job-note').value = '';
+            
+            this.tempNotes = [];
+            this.renderTimeline();
             
             this.populateResumeDropdown();
+            this.toggleInterviewDate();
             
             document.getElementById('job-modal').classList.remove('hidden');
         },
 
         closeModal() {
             document.getElementById('job-modal').classList.add('hidden');
+        },
+
+        toggleInterviewDate() {
+            const status = document.getElementById('job-status').value;
+            const group = document.getElementById('interview-date-group');
+            if (status === 'interview') {
+                group.classList.remove('hidden');
+            } else {
+                group.classList.add('hidden');
+            }
+        },
+
+        addNoteUI(e) {
+            if(e) e.preventDefault();
+            const input = document.getElementById('new-job-note');
+            const text = input.value.trim();
+            if (!text) return;
+            
+            this.tempNotes.push({ text, date: new Date().toISOString() });
+            input.value = '';
+            this.renderTimeline();
+        },
+
+        renderTimeline() {
+            const container = document.getElementById('job-notes-timeline');
+            if (!this.tempNotes || this.tempNotes.length === 0) {
+                container.innerHTML = '<div style="color:#888; font-size:0.9rem; text-align:center;">No notes added yet.</div>';
+                return;
+            }
+            
+            container.innerHTML = this.tempNotes.map(n => {
+                const dateObj = new Date(n.date);
+                const dateStr = dateObj.toLocaleDateString() + ' ' + dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                return `
+                    <div class="timeline-entry">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-date">${dateStr}</div>
+                            <div class="timeline-text">${n.text}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            container.scrollTop = container.scrollHeight;
         },
 
         populateResumeDropdown(selectedId = '') {
@@ -257,6 +357,46 @@ const app = {
             this.render();
         },
 
+        onQuickStatusChange(id, newStatus) {
+            const job = this.data.find(j => j.id === id);
+            if(job) {
+                job.status = newStatus;
+                job.updatedAt = new Date().toISOString();
+                localStorage.setItem('aigraft_jobs', JSON.stringify(this.data));
+                this.render();
+            }
+        },
+
+        exportCSV() {
+            if(this.data.length === 0) {
+                alert("No jobs to export.");
+                return;
+            }
+            const headers = ['Company', 'Role', 'Date Applied', 'Status', 'Priority', 'Source', 'Salary', 'Resume Used'];
+            const rows = this.data.map(j => {
+                const resumeName = this.getResumeName(j.resumeId).replace(/,/g, '');
+                return [
+                    `"${j.company || ''}"`,
+                    `"${j.role || ''}"`,
+                    `"${j.date || ''}"`,
+                    `"${j.status || ''}"`,
+                    `"${j.priority || ''}"`,
+                    `"${j.source || ''}"`,
+                    `"${j.salary || ''}"`,
+                    `"${resumeName}"`
+                ].join(',');
+            });
+            const csvContent = headers.join(',') + '\n' + rows.join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `job_applications_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        },
+
         getFilteredJobs() {
             return this.data.filter(j => {
                 const matchesSearch = !this.searchQuery || 
@@ -274,20 +414,82 @@ const app = {
             document.getElementById('stat-rejected').textContent = this.data.filter(j => j.status === 'rejected').length;
         },
 
-        getStatusBadge(status) {
+        getPriorityBadge(priority) {
             const map = {
-                'pending': '<span class="status-badge status-pending">🟡 Pending</span>',
-                'interview': '<span class="status-badge status-interview">🔵 Interview</span>',
-                'offer': '<span class="status-badge status-offer">🟢 Offer</span>',
-                'rejected': '<span class="status-badge status-rejected">🔴 Rejected</span>'
+                'high': '<span class="priority-badge prio-high">🔴 High</span>',
+                'medium': '<span class="priority-badge prio-medium">🟡 Med</span>',
+                'low': '<span class="priority-badge prio-low">🟢 Low</span>'
             };
-            return map[status] || map['pending'];
+            return map[priority] || map['medium'];
         },
         
         getResumeName(id) {
             if(!id) return '-';
             const r = app.resumes.find(res => res.id === id);
             return r ? `${r.fullname} (${r.template})` : 'Deleted Resume';
+        },
+
+        renderCharts() {
+            const analyticsSection = document.getElementById('job-analytics-section');
+            if (this.data.length === 0) {
+                analyticsSection.classList.add('hidden');
+                return;
+            }
+            analyticsSection.classList.remove('hidden');
+
+            if (this.charts.pie) this.charts.pie.destroy();
+            if (this.charts.bar) this.charts.bar.destroy();
+
+            // Status Breakdown Pie Chart
+            const statusCounts = { pending: 0, interview: 0, offer: 0, rejected: 0 };
+            this.data.forEach(j => { if(statusCounts[j.status] !== undefined) statusCounts[j.status]++; });
+
+            const ctxPie = document.getElementById('job-pie-chart').getContext('2d');
+            this.charts.pie = new Chart(ctxPie, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Pending', 'Interview', 'Offer', 'Rejected'],
+                    datasets: [{
+                        data: [statusCounts.pending, statusCounts.interview, statusCounts.offer, statusCounts.rejected],
+                        backgroundColor: ['#fde047', '#3b82f6', '#10b981', '#ef4444'],
+                        borderWidth: 0
+                    }]
+                },
+                options: { plugins: { legend: { labels: { color: '#fff' } } } }
+            });
+
+            // Applications per month Bar Chart
+            const monthCounts = {};
+            this.data.forEach(j => {
+                const d = new Date(j.date);
+                if (!isNaN(d)) {
+                    const month = d.toLocaleString('default', { month: 'short', year: 'numeric' });
+                    monthCounts[month] = (monthCounts[month] || 0) + 1;
+                }
+            });
+            const months = Object.keys(monthCounts).sort((a,b) => new Date(a) - new Date(b));
+            const dataCounts = months.map(m => monthCounts[m]);
+
+            const ctxBar = document.getElementById('job-bar-chart').getContext('2d');
+            this.charts.bar = new Chart(ctxBar, {
+                type: 'bar',
+                data: {
+                    labels: months.length ? months : ['No Data'],
+                    datasets: [{
+                        label: 'Applications',
+                        data: dataCounts.length ? dataCounts : [0],
+                        backgroundColor: '#4f46e5',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { ticks: { color: '#aaa', stepSize: 1 }, grid: { color: '#333' } },
+                        x: { ticks: { color: '#aaa' }, grid: { display: false } }
+                    }
+                }
+            });
         },
 
         render() {
@@ -300,47 +502,103 @@ const app = {
                 emptyState.classList.remove('hidden');
                 document.getElementById('job-table-view').classList.add('hidden');
                 document.getElementById('job-kanban-view').classList.add('hidden');
+                document.getElementById('job-analytics-section').classList.add('hidden');
+                document.getElementById('job-followup-banner').classList.add('hidden');
                 return;
             } else {
                 emptyState.classList.add('hidden');
                 this.switchView(this.currentView);
             }
 
+            // Follow-up Logic
+            let followups = 0;
+            const todayStr = new Date().toISOString().split('T')[0];
+            
             // Render Table
             const tbody = document.getElementById('job-table-body');
-            tbody.innerHTML = filtered.map(j => `
+            tbody.innerHTML = filtered.map(j => {
+                let isOverdue = false;
+                if(j.status === 'pending' && j.followupDate && j.followupDate <= todayStr) {
+                    followups++;
+                    isOverdue = true;
+                }
+                
+                return `
                 <tr>
-                    <td style="font-weight:bold">${j.company}</td>
-                    <td>${j.role}</td>
+                    <td style="font-weight:bold">
+                        ${isOverdue ? '<span title="Follow-up Overdue!" style="margin-right:5px;">🔔</span>' : ''}
+                        ${j.company}
+                    </td>
+                    <td>
+                        ${this.getPriorityBadge(j.priority)}<br>
+                        <span style="font-size:0.9rem;">${j.role}</span>
+                    </td>
                     <td>${j.date}</td>
-                    <td>${this.getStatusBadge(j.status)}</td>
+                    <td>
+                        <select class="quick-status-select" onchange="app.jobs.onQuickStatusChange('${j.id}', this.value)" style="color: ${j.status==='pending'?'#fde047': j.status==='interview'?'#3b82f6': j.status==='offer'?'#10b981':'#ef4444'}">
+                            <option value="pending" ${j.status==='pending'?'selected':''}>🟡 Pending</option>
+                            <option value="interview" ${j.status==='interview'?'selected':''}>🔵 Interview</option>
+                            <option value="offer" ${j.status==='offer'?'selected':''}>🟢 Offer</option>
+                            <option value="rejected" ${j.status==='rejected'?'selected':''}>🔴 Rejected</option>
+                        </select>
+                    </td>
                     <td><span style="font-size:0.85rem; color:#aaa;">${this.getResumeName(j.resumeId)}</span></td>
                     <td>
                         <button class="btn btn-secondary btn-small" onclick="app.jobs.editJob('${j.id}')">Edit</button>
                         <button class="btn btn-ghost btn-small" style="color:var(--red)" onclick="app.jobs.deleteJob('${j.id}')">Delete</button>
                     </td>
                 </tr>
-            `).join('') || '<tr><td colspan="6" style="text-align:center; padding: 2rem;">No jobs match your search/filter.</td></tr>';
+            `}).join('') || '<tr><td colspan="6" style="text-align:center; padding: 2rem;">No jobs match your search/filter.</td></tr>';
+
+            // Update Followup Banner
+            const banner = document.getElementById('job-followup-banner');
+            if (followups > 0) {
+                document.getElementById('followup-count').textContent = followups;
+                banner.classList.remove('hidden');
+            } else {
+                banner.classList.add('hidden');
+            }
 
             // Render Kanban
-            const columns = { pending: '', interview: '', offer: '', rejected: '' };
+            const columnsData = { pending: [], interview: [], offer: [], rejected: [] };
             filtered.forEach(j => {
-                columns[j.status] += `
-                    <div class="kb-card glass-card">
-                        <div class="kb-card-title">${j.role}</div>
-                        <div class="kb-card-company">${j.company}</div>
-                        <div class="kb-card-date">📅 ${j.date}</div>
-                        <div class="kb-card-actions">
-                            <button class="btn btn-secondary btn-small" style="padding: 0.2rem 0.5rem; font-size: 0.8rem;" onclick="app.jobs.editJob('${j.id}')">Edit</button>
-                        </div>
-                    </div>
-                `;
+                if(columnsData[j.status]) columnsData[j.status].push(j);
             });
+            
+            // Priority ordering: high > medium > low
+            const pOrder = { high: 3, medium: 2, low: 1 };
 
             ['pending', 'interview', 'offer', 'rejected'].forEach(status => {
                 const el = document.querySelector(`#kb-${status} .kb-cards`);
-                if(el) el.innerHTML = columns[status];
+                if(el) {
+                    columnsData[status].sort((a,b) => (pOrder[b.priority||'medium'] - pOrder[a.priority||'medium']));
+                    
+                    el.innerHTML = columnsData[status].map(j => {
+                        let isOverdue = (j.status === 'pending' && j.followupDate && j.followupDate <= todayStr);
+                        return `
+                            <div class="kb-card glass-card">
+                                <div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem;">
+                                    ${this.getPriorityBadge(j.priority)}
+                                    ${isOverdue ? '<span title="Follow-up Overdue!">🔔</span>' : ''}
+                                </div>
+                                <div class="kb-card-title">${j.role}</div>
+                                <div class="kb-card-company">${j.company}</div>
+                                <div class="kb-card-date">📅 ${j.date}</div>
+                                <div class="kb-card-actions">
+                                    <button class="btn btn-secondary btn-small" style="padding: 0.2rem 0.5rem; font-size: 0.8rem;" onclick="app.jobs.editJob('${j.id}')">Edit</button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
             });
+
+            // Make sure charts render, but ensure Chart.js is loaded first
+            if (window.Chart) {
+                this.renderCharts();
+            } else {
+                setTimeout(() => { if(window.Chart) this.renderCharts(); }, 500);
+            }
         }
     },
 
