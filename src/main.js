@@ -543,7 +543,8 @@ const app = {
                         </select>
                     </td>
                     <td><span style="font-size:0.85rem; color:#aaa;">${this.getResumeName(j.resumeId)}</span></td>
-                    <td>
+                    <td style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <button class="btn btn-primary btn-small" onclick="app.interviewPrep.generateOrView('${j.id}')">✨ Prep</button>
                         <button class="btn btn-secondary btn-small" onclick="app.jobs.editJob('${j.id}')">Edit</button>
                         <button class="btn btn-ghost btn-small" style="color:var(--red)" onclick="app.jobs.deleteJob('${j.id}')">Delete</button>
                     </td>
@@ -584,7 +585,8 @@ const app = {
                                 <div class="kb-card-title">${j.role}</div>
                                 <div class="kb-card-company">${j.company}</div>
                                 <div class="kb-card-date">📅 ${j.date}</div>
-                                <div class="kb-card-actions">
+                                <div class="kb-card-actions" style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                                    <button class="btn btn-primary btn-small" style="padding: 0.2rem 0.5rem; font-size: 0.8rem;" onclick="app.interviewPrep.generateOrView('${j.id}')">✨ Prep</button>
                                     <button class="btn btn-secondary btn-small" style="padding: 0.2rem 0.5rem; font-size: 0.8rem;" onclick="app.jobs.editJob('${j.id}')">Edit</button>
                                 </div>
                             </div>
@@ -599,6 +601,336 @@ const app = {
             } else {
                 setTimeout(() => { if(window.Chart) this.renderCharts(); }, 500);
             }
+        }
+    },
+
+    interviewPrep: {
+        getApiKey() {
+            return localStorage.getItem('anthropic_api_key') || '';
+        },
+        
+        openSettingsModal() {
+            document.getElementById('anthropic-api-key').value = this.getApiKey();
+            document.getElementById('api-settings-modal').classList.remove('hidden');
+        },
+
+        closeSettingsModal() {
+            document.getElementById('api-settings-modal').classList.add('hidden');
+        },
+
+        saveApiKey() {
+            const key = document.getElementById('anthropic-api-key').value.trim();
+            if (!key || key.length < 10) {
+                alert('🚨 Please enter a valid API key.');
+                return;
+            }
+            localStorage.setItem('anthropic_api_key', key);
+            this.closeSettingsModal();
+            alert('✅ API Key saved! Generating your interview prep now...');
+        },
+
+        openPrepModal() {
+            document.getElementById('interview-prep-modal').classList.remove('hidden');
+        },
+
+        closePrepModal() {
+            document.getElementById('interview-prep-modal').classList.add('hidden');
+        },
+
+        async generateOrView(jobId) {
+            const job = app.jobs.data.find(j => j.id === jobId);
+            if (!job) return;
+
+            // If we already generated prep material for this job, just show it.
+            if (job.prepData) {
+                this.renderPrepData(job.prepData, job.company);
+                this.openPrepModal();
+                return;
+            }
+
+            const apiKey = this.getApiKey();
+            if (!apiKey) {
+                alert('🚨 Please configure your Anthropic API Key first.');
+                this.openSettingsModal();
+                return;
+            }
+
+            // Show Loading state
+            document.getElementById('prep-modal-title').textContent = `Generating Prep for ${job.company}...`;
+            document.getElementById('prep-modal-body').innerHTML = `<div style="text-align:center; padding: 2rem;">Loading... ✨ This might take a few seconds.</div>`;
+            this.openPrepModal();
+
+            try {
+                const prepData = await this.callAnthropicApi(job.role, job.company, 'Mid', '', apiKey);
+                if (prepData) {
+                    job.prepData = prepData;
+                    localStorage.setItem('aigraft_jobs', JSON.stringify(app.jobs.data));
+                    this.renderPrepData(prepData, job.company);
+                } else {
+                    document.getElementById('prep-modal-body').innerHTML = `<div style="color: var(--red); padding: 1rem;">Failed to parse response. Please try again.</div>`;
+                }
+            } catch (err) {
+                let errorHtml = `<div style="color: var(--red); padding: 2rem; text-align: center;">`;
+                if (err.message.includes('401')) {
+                    errorHtml += `
+                        <h3 style="margin-bottom: 0.5rem;">Invalid API Key 🔑</h3>
+                        <p style="color: #ccc; margin-bottom: 1.5rem;">Your Anthropic API Key is missing or invalid. Please check your settings.</p>
+                        <button class="btn btn-secondary" onclick="app.interviewPrep.closePrepModal(); app.interviewPrep.openSettingsModal();">Configure API Key</button>
+                    `;
+                } else {
+                    errorHtml += `<h3 style="margin-bottom: 0.5rem;">API Error 🚨</h3><p style="color: #ccc;">${err.message}</p>`;
+                }
+                errorHtml += `</div>`;
+                document.getElementById('prep-modal-body').innerHTML = errorHtml;
+            }
+        },
+
+        async callAnthropicApi(role, company, level, jobDescription, apiKey) {
+
+            const prompt = `You are an expert interview coach with 15+ years of experience.
+
+I have applied for the following job. Generate complete interview preparation material.
+
+Job Details:
+- Role: ${role}
+- Company: ${company}
+- Experience Level: ${level}
+- Job Description: ${jobDescription || 'Not provided'}
+
+Generate 5 questions each for HR, Technical, Behavioral rounds and 4 for Managerial round.
+Each question must have a coaching tip.
+Also include 6 company research points, 5 questions to ask interviewer, 5 prep tips, and difficulty rating.
+
+Return ONLY valid JSON, no extra text, no markdown, no backticks:
+
+{
+  "job": { "role": "${role}", "company": "${company}", "level": "${level}" },
+  "rounds": [
+    {
+      "round": "HR / Screening",
+      "questions": [
+        { "id": 1, "question": "...", "tip": "..." },
+        { "id": 2, "question": "...", "tip": "..." },
+        { "id": 3, "question": "...", "tip": "..." },
+        { "id": 4, "question": "...", "tip": "..." },
+        { "id": 5, "question": "...", "tip": "..." }
+      ]
+    },
+    {
+      "round": "Technical",
+      "questions": [
+        { "id": 6, "question": "...", "tip": "..." },
+        { "id": 7, "question": "...", "tip": "..." },
+        { "id": 8, "question": "...", "tip": "..." },
+        { "id": 9, "question": "...", "tip": "..." },
+        { "id": 10, "question": "...", "tip": "..." }
+      ]
+    },
+    {
+      "round": "Behavioral (STAR Format)",
+      "questions": [
+        { "id": 11, "question": "...", "tip": "..." },
+        { "id": 12, "question": "...", "tip": "..." },
+        { "id": 13, "question": "...", "tip": "..." },
+        { "id": 14, "question": "...", "tip": "..." },
+        { "id": 15, "question": "...", "tip": "..." }
+      ]
+    },
+    {
+      "round": "Managerial / Culture Fit",
+      "questions": [
+        { "id": 16, "question": "...", "tip": "..." },
+        { "id": 17, "question": "...", "tip": "..." },
+        { "id": 18, "question": "...", "tip": "..." },
+        { "id": 19, "question": "...", "tip": "..." }
+      ]
+    }
+  ],
+  "company_research": [
+    { "topic": "Business Model", "what_to_research": "..." },
+    { "topic": "Recent News", "what_to_research": "..." },
+    { "topic": "Company Culture", "what_to_research": "..." },
+    { "topic": "Competitors", "what_to_research": "..." },
+    { "topic": "Products / Services", "what_to_research": "..." },
+    { "topic": "Interview Style", "what_to_research": "..." }
+  ],
+  "ask_interviewer": [
+    { "id": 1, "question": "..." },
+    { "id": 2, "question": "..." },
+    { "id": 3, "question": "..." },
+    { "id": 4, "question": "..." },
+    { "id": 5, "question": "..." }
+  ],
+  "preparation_tips": [
+    { "id": 1, "tip": "..." },
+    { "id": 2, "tip": "..." },
+    { "id": 3, "tip": "..." },
+    { "id": 4, "tip": "..." },
+    { "id": 5, "tip": "..." }
+  ],
+  "difficulty": { "level": "Medium", "reason": "..." }
+}`;
+
+            // ✅ Dynamic Model Discovery & Fallback Loop
+            let availableModels = ["gemini-1.5-flash"]; 
+            try {
+                const modelsResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+                if (modelsResp.ok) {
+                    const modelsData = await modelsResp.json();
+                    const fetchedModels = modelsData.models
+                        .filter(m => m.supportedGenerationMethods?.includes("generateContent"))
+                        .map(m => m.name.replace("models/", ""));
+                    if (fetchedModels.length > 0) availableModels = fetchedModels;
+                }
+            } catch (e) {
+                console.warn("Failed to fetch models list, using default model.");
+            }
+
+            // Preference order: try the most reliable ones first
+            const preferredOrder = [
+                "gemini-2.5-flash",
+                "gemini-1.5-flash",
+                "gemini-1.5-flash-latest",
+                "gemini-1.5-pro",
+                "gemini-2.5-pro",
+                "gemini-pro"
+            ];
+            
+            // Sort models by preference
+            availableModels.sort((a, b) => {
+                let idxA = preferredOrder.indexOf(a);
+                let idxB = preferredOrder.indexOf(b);
+                if (idxA === -1) idxA = 999;
+                if (idxB === -1) idxB = 999;
+                return idxA - idxB;
+            });
+
+            let response = null;
+            let lastErrText = "";
+            let attemptedModels = [];
+
+            // Try up to 3 models if we hit high demand or errors
+            const modelsToTry = availableModels.slice(0, 3);
+
+            for (const model of modelsToTry) {
+                attemptedModels.push(model);
+                response = await fetch(
+                    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+                    {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: prompt }] }],
+                            generationConfig: {
+                                temperature: 0.7,
+                                maxOutputTokens: 2500
+                            }
+                        })
+                    }
+                );
+
+                if (response.ok) {
+                    break; // Success!
+                } else {
+                    lastErrText = await response.text();
+                    console.warn(`Model ${model} failed: ${response.status} ${lastErrText}`);
+                    // If it's a client error like 400 (bad prompt), it might fail on all, but we keep trying just in case
+                }
+            }
+
+            if (!response || !response.ok) {
+                throw new Error(`${response ? response.status : 'Unknown Error'}: ${lastErrText} (Tried models: ${attemptedModels.join(', ')})`);
+            }
+
+            const data = await response.json();
+
+            // ✅ Gemini response parsing
+            const text = data.candidates[0].content.parts[0].text;
+            const clean = text
+                .replace(/```json\s*/gi, '')
+                .replace(/```\s*/gi, '')
+                .trim();
+
+            try {
+                return JSON.parse(clean);
+            } catch (e) {
+                const jsonMatch = clean.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    try { return JSON.parse(jsonMatch[0]); }
+                    catch (e2) { console.error("Parse failed:", text); return null; }
+                }
+                return null;
+            }
+        },
+
+        renderPrepData(data, company) {
+            document.getElementById('prep-modal-title').textContent = `Interview Prep for ${company}`;
+            
+            let html = `
+                <div style="background: rgba(var(--primary-rgb), 0.1); border: 1px solid var(--primary); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                    <h3 style="color: var(--primary); margin-bottom: 0.5rem;">Difficulty: ${data.difficulty?.level || 'N/A'}</h3>
+                    <p style="font-size: 0.9rem;">${data.difficulty?.reason || ''}</p>
+                </div>
+            `;
+
+            // Rounds
+            if (data.rounds && data.rounds.length > 0) {
+                html += `<h3>Interview Rounds</h3>`;
+                data.rounds.forEach(r => {
+                    html += `
+                        <div style="margin-bottom: 1.5rem;">
+                            <h4 style="margin-bottom: 0.5rem; color: #fde047;">${r.round}</h4>
+                            <div style="display: flex; flex-direction: column; gap: 0.8rem;">
+                                ${r.questions.map(q => `
+                                    <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; border-left: 3px solid var(--glass-border);">
+                                        <div style="font-weight: 600; margin-bottom: 0.3rem;">Q: ${q.question}</div>
+                                        <div style="font-size: 0.85rem; color: #aaa;">💡 Tip: ${q.tip}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            // Company Research
+            if (data.company_research && data.company_research.length > 0) {
+                html += `<h3 style="margin-top: 2rem; margin-bottom: 1rem;">Company Research Checklist</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem;">
+                    ${data.company_research.map(c => `
+                        <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; border: 1px solid var(--glass-border);">
+                            <div style="font-weight: 600; color: #10b981; margin-bottom: 0.3rem;">${c.topic}</div>
+                            <div style="font-size: 0.85rem; color: #ccc;">${c.what_to_research}</div>
+                        </div>
+                    `).join('')}
+                </div>`;
+            }
+
+            // Ask Interviewer
+            if (data.ask_interviewer && data.ask_interviewer.length > 0) {
+                html += `<h3 style="margin-bottom: 1rem;">Questions to Ask Them</h3>
+                <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.8rem; margin-bottom: 2rem;">
+                    ${data.ask_interviewer.map(q => `
+                        <li style="background: rgba(0,0,0,0.2); padding: 0.8rem 1rem; border-radius: 8px; display: flex; gap: 0.5rem;">
+                            <span>❓</span> <span>${q.question}</span>
+                        </li>
+                    `).join('')}
+                </ul>`;
+            }
+
+            // Prep Tips
+            if (data.preparation_tips && data.preparation_tips.length > 0) {
+                html += `<h3 style="margin-bottom: 1rem;">Preparation Tips</h3>
+                <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.8rem;">
+                    ${data.preparation_tips.map(t => `
+                        <li style="background: rgba(0,0,0,0.2); padding: 0.8rem 1rem; border-radius: 8px; display: flex; gap: 0.5rem; border-left: 3px solid #3b82f6;">
+                            <span>📌</span> <span>${t.tip}</span>
+                        </li>
+                    `).join('')}
+                </ul>`;
+            }
+
+            document.getElementById('prep-modal-body').innerHTML = html;
         }
     },
 

@@ -210,6 +210,7 @@
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <h2>Job Tracker</h2>
                         <div style="display: flex; gap: 1rem;">
+                            <button class="btn btn-ghost" onclick="app.interviewPrep.openSettingsModal()" style="border: 1px solid var(--glass-border);">⚙️ API Key</button>
                             <button class="btn btn-secondary" onclick="app.jobs.exportCSV()">Export CSV</button>
                             <button class="btn btn-primary" onclick="app.jobs.openModal()">+ Add Job</button>
                         </div>
@@ -432,6 +433,40 @@
                 <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1.5rem;">
                     <button class="btn btn-ghost" onclick="app.jobs.closeModal()">Cancel</button>
                     <button class="btn btn-primary" onclick="app.jobs.saveJob()">Save Job</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Interview Prep API Settings Modal -->
+        <div id="api-settings-modal" class="modal hidden">
+            <div class="modal-content glass-card">
+                <h2 style="margin-bottom: 1.5rem;">Anthropic API Settings</h2>
+                <p style="margin-bottom: 1rem; color: #ccc;">
+                    Enter your <strong style="color:white;">Google Gemini API Key</strong> (Free). 
+                    Get it free at 
+                    <a href="https://aistudio.google.com" target="_blank" style="color:#4f46e5;">aistudio.google.com</a>
+                    — no credit card needed!
+                </p>
+                <div class="input-group full-width">
+                    <label>Anthropic API Key</label>
+                    <input type="password" id="anthropic-api-key" placeholder="sk-ant-...">
+                </div>
+                <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1.5rem;">
+                    <button class="btn btn-ghost" onclick="app.interviewPrep.closeSettingsModal()">Cancel</button>
+                    <button class="btn btn-primary" onclick="app.interviewPrep.saveApiKey()">Save Key</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Interview Prep Content Modal -->
+        <div id="interview-prep-modal" class="modal hidden">
+            <div class="modal-content glass-card" style="max-width: 800px; max-height: 90vh; overflow-y: auto;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <h2 id="prep-modal-title">Interview Prep</h2>
+                    <button class="btn btn-ghost" onclick="app.interviewPrep.closePrepModal()" style="border: none; background: transparent; font-size: 1.5rem; cursor: pointer; color: white;">✕</button>
+                </div>
+                <div id="prep-modal-body">
+                    <!-- Dynamic Content -->
                 </div>
             </div>
         </div>
